@@ -74,6 +74,13 @@ shellcheck install.sh scripts/build-release.sh tests/test-release.sh
 ./tests/test-release.sh "/path/to/Vivolution CP Installer"
 ```
 
+After publication, run the live download and checksum path without installing
+anything on an Ubuntu 24.04 host:
+
+```sh
+./tests/verify-published-ubuntu.sh
+```
+
 Publication is deliberately not automated here. Create the public repository,
 push the reviewed files, create the immutable `v0.3.0-rc1` tag, and upload the
 exact file from `dist/` only after the local digest and tests pass.
