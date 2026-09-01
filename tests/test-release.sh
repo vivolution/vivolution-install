@@ -184,16 +184,16 @@ grep -F 'email {{ cp_acme_email | to_json }}' "$controller_caddyfile" >/dev/null
 if grep -i -E 'zerossl|tls[[:space:]]+internal' "$controller_caddyfile" >/dev/null; then
     fail 'packaged Controller contains an alternate or local certificate issuer'
 fi
-grep -F 'INSTALLER_VERSION = "0.3.0-rc6"' "$controller_installer" >/dev/null ||
+grep -F 'INSTALLER_VERSION = "0.3.0-rc7"' "$controller_installer" >/dev/null ||
     fail 'packaged launcher has a stale internal version'
 grep -F 'LEDGER_SCHEMA_VERSION = 5' "$controller_installer" >/dev/null ||
-    fail 'packaged launcher does not use the rc6 schema-5 ledger'
+    fail 'packaged launcher does not use the rc7 schema-5 ledger'
 grep -F 'DEFAULT_STATE_DIR = "/var/lib/vivolution/installer"' \
     "$controller_installer" >/dev/null ||
-    fail 'packaged launcher does not use the secured rc6 state namespace'
+    fail 'packaged launcher does not use the secured rc7 state namespace'
 grep -F 'DEFAULT_LOG_DIR = "/var/log/vivolution/installer"' \
     "$controller_installer" >/dev/null ||
-    fail 'packaged launcher does not use the secured rc6 log namespace'
+    fail 'packaged launcher does not use the secured rc7 log namespace'
 for menu_label in \
     'Create a new Controller Plane' \
     'Join an existing Controller Plane' \

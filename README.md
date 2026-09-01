@@ -29,7 +29,7 @@ curl --fail --show-error --silent --location --proto '=https' --proto-redir '=ht
 ```
 
 The `main/install.sh` path is Vivolution's mutable **latest-recommended
-channel**. It currently installs `v0.3.0-rc6`. Each approved release advances
+channel**. It currently installs `v0.3.0-rc7`. Each approved release advances
 this channel only after its exact version, source commit, asset name, and
 SHA-256 digest have been updated and the release checks pass. The bootstrap
 does not blindly execute an asset selected by the GitHub API: the channel
@@ -41,7 +41,7 @@ SHA-256 digest before running it.
 Use this form when a deployment must remain reproducible on one exact release:
 
 ```sh
-curl --fail --show-error --silent --location --proto '=https' --proto-redir '=https' --tlsv1.2 https://raw.githubusercontent.com/vivolution/vivolution-install/v0.3.0-rc6/install.sh | sudo sh
+curl --fail --show-error --silent --location --proto '=https' --proto-redir '=https' --tlsv1.2 https://raw.githubusercontent.com/vivolution/vivolution-install/v0.3.0-rc7/install.sh | sudo sh
 ```
 
 The command opens this neutral menu:
@@ -62,6 +62,23 @@ diagnostics, inspect/create a redacted support bundle, resume/reconcile a
 schema-5 installation, and discard only a proven pre-mutation incomplete run.
 Controller joining/HA, full SBC/SIP/RTP/Teams/carrier deployment, legacy-state
 deletion, and post-mutation uninstall remain unavailable.
+
+### rc7 Ubuntu qualification correction
+
+rc7 fixes two issues found by running the real installer on a clean Ubuntu
+24.04.4 ARM64 VM rather than relying only on static tests:
+
+- it stops a package-replaced `systemd-timesyncd` process even when systemd
+  reports the old unit as `LoadState=not-found` but still active; and
+- it keeps the strict synchronized-clock checks without waiting for Chrony's
+  initial frequency-skew estimate to converge after the host is already
+  synchronized with bounded correction, normal leap state, and valid stratum.
+
+That UTM run passed package installation, SSH safety, PostgreSQL, PgBouncer,
+Podman image build, migrations, Controller activation, and maintenance setup.
+It then failed closed at trusted HTTPS, as expected, because the NAT-only lab
+did not expose public TCP 80/443 for Let's Encrypt validation. Public issuance
+on the Azure test VM remains the final live gate for this prerelease.
 
 ### Controller VM sizing
 
@@ -162,15 +179,15 @@ If public issuance is unavailable, the trusted HTTPS readiness checks fail the
 installation instead of accepting an untrusted certificate. Before installing,
 ensure both A records are fully propagated, remove stale/incorrect AAAA records,
 make public TCP 80/443 reach this VM, and permit `letsencrypt.org` in any CAA
-policy. rc6 requires a fresh host. It does not resume/delete a legacy schema-4
+policy. rc7 requires a fresh host. It does not resume/delete a legacy schema-4
 run or claim to convert certificates cached by an older installation.
 
 Stock Ubuntu 24.04 normally exposes `/etc/os-release` as the canonical relative
 symlink `../usr/lib/os-release`; the packaged check accepts that exact safe
-layout. An interrupted compatible rc6 schema-5 run can be resumed with:
+layout. An interrupted compatible rc7 schema-5 run can be resumed with:
 
 ```sh
-curl --fail --show-error --silent --location --proto '=https' --proto-redir '=https' --tlsv1.2 https://raw.githubusercontent.com/vivolution/vivolution-install/v0.3.0-rc6/install.sh | sudo sh -s -- resume
+curl --fail --show-error --silent --location --proto '=https' --proto-redir '=https' --tlsv1.2 https://raw.githubusercontent.com/vivolution/vivolution-install/v0.3.0-rc7/install.sh | sudo sh -s -- resume
 ```
 
 This automation covers the Controller web/API certificate only. Future SBC
@@ -179,7 +196,7 @@ certificate workflow and are not installed by this enrollment-only release.
 
 ### Logs, support bundle, and incomplete-run cleanup
 
-rc6 stores root-only transaction state under `/var/lib/vivolution/installer`,
+rc7 stores root-only transaction state under `/var/lib/vivolution/installer`,
 human/JSONL evidence under `/var/log/vivolution/installer`, and its stable
 non-secret PID-bearing lock under `/run/vivolution/installer.lock`. Logs use
 RFC 3339 UTC timestamps, severity plus AUDIT events, contextual IDs, bounded
@@ -201,7 +218,7 @@ This command installs only the outbound Edge enrollment client/placeholder on
 a separate fresh Ubuntu Server 24.04 LTS machine:
 
 ```sh
-curl --fail --show-error --silent --location --proto '=https' --proto-redir '=https' --tlsv1.2 https://raw.githubusercontent.com/vivolution/vivolution-install/v0.3.0-rc6/install-edge.sh | sudo sh
+curl --fail --show-error --silent --location --proto '=https' --proto-redir '=https' --tlsv1.2 https://raw.githubusercontent.com/vivolution/vivolution-install/v0.3.0-rc7/install-edge.sh | sudo sh
 ```
 
 It does **not** install or configure an SBC, SIP services, RTP/media, Microsoft
@@ -240,11 +257,11 @@ checks without installing anything:
 
 ```sh
 curl --fail --show-error --silent --location --proto '=https' --proto-redir '=https' --tlsv1.2 \
-  https://raw.githubusercontent.com/vivolution/vivolution-install/v0.3.0-rc6/install.sh \
+  https://raw.githubusercontent.com/vivolution/vivolution-install/v0.3.0-rc7/install.sh \
   | sudo sh -s -- --verify-only
 
 curl --fail --show-error --silent --location --proto '=https' --proto-redir '=https' --tlsv1.2 \
-  https://raw.githubusercontent.com/vivolution/vivolution-install/v0.3.0-rc6/install-edge.sh \
+  https://raw.githubusercontent.com/vivolution/vivolution-install/v0.3.0-rc7/install-edge.sh \
   | sudo sh -s -- --verify-only
 ```
 
@@ -257,22 +274,22 @@ compatibility check without creating installer state or installing packages:
 
 ```sh
 curl --fail --show-error --silent --location --proto '=https' --proto-redir '=https' --tlsv1.2 \
-  https://raw.githubusercontent.com/vivolution/vivolution-install/v0.3.0-rc6/install.sh \
+  https://raw.githubusercontent.com/vivolution/vivolution-install/v0.3.0-rc7/install.sh \
   | sudo sh -s -- check-host-os
 
 curl --fail --show-error --silent --location --proto '=https' --proto-redir '=https' --tlsv1.2 \
-  https://raw.githubusercontent.com/vivolution/vivolution-install/v0.3.0-rc6/install-edge.sh \
+  https://raw.githubusercontent.com/vivolution/vivolution-install/v0.3.0-rc7/install-edge.sh \
   | sudo sh -s -- --check-host-os
 ```
 
 ## Immutable release record
 
-- Public release: `v0.3.0-rc6`
-- Approved private source commit: `59c074df7f11d37c2a63d804485d5f5885156b96`
-- Controller asset: `vivolution-controller-0.3.0-rc6.tar.gz`
-- Controller asset SHA-256: `82e543423d7aca8483ac5c5d8b9ca8624e77baf110fbc10d1f8f6efd7ca7464a`
-- Edge asset: `vivolution-edge-enrollment-0.3.0-rc6.tar.gz`
-- Edge asset SHA-256: `cd34f6f230746935fbe477f2a8846924115159f8c25dfcd0df1211ae687a65cf`
+- Public release: `v0.3.0-rc7`
+- Approved private source commit: `577cfbf6814d14772b61678c2b8bc3132b92d156`
+- Controller asset: `vivolution-controller-0.3.0-rc7.tar.gz`
+- Controller asset SHA-256: `b9b6cf50356408933845566296ad14e249ff9df983770eaea2335b3eda72b8c0`
+- Edge asset: `vivolution-edge-enrollment-0.3.0-rc7.tar.gz`
+- Edge asset SHA-256: `4345123ffda1c0741a81e5bf6501833f46c494722bfe7dc9518270bef00c41fa`
 
 Both assets are built from the same immutable private source commit but have
 separate explicit reviewed allowlists. The release test proves that the
