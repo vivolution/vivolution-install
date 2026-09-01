@@ -12,13 +12,10 @@ the turnkey installer, and the Ansible roles required by standalone CP1.
 
 ## Release candidate command
 
-After the `v0.3.0-rc1` tag and matching GitHub Release asset exist, run this on
-a fresh Ubuntu Server 24.04 LTS host:
+Run this now on a fresh Ubuntu Server 24.04 LTS host:
 
 ```sh
-curl --fail --show-error --silent --location --proto '=https' --tlsv1.2 \
-  https://raw.githubusercontent.com/vivolution/vivolution-install/v0.3.0-rc1/install.sh \
-  | sudo sh
+curl --fail --show-error --silent --location --proto '=https' --tlsv1.2 https://raw.githubusercontent.com/vivolution/vivolution-install/v0.3.0-rc1/install.sh | sudo sh
 ```
 
 This is a **beta standalone CP1-only** release candidate for clean-host
