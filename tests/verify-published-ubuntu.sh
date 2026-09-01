@@ -2,6 +2,7 @@
 set -eu
 
 CONTROLLER_BOOTSTRAP_URL='https://raw.githubusercontent.com/vivolution/vivolution-install/v0.3.0-rc3/install.sh'
+CONTROLLER_LATEST_URL='https://raw.githubusercontent.com/vivolution/vivolution-install/main/install.sh'
 EDGE_BOOTSTRAP_URL='https://raw.githubusercontent.com/vivolution/vivolution-install/v0.3.0-rc3/install-edge.sh'
 TEMP_ROOT=''
 
@@ -23,7 +24,7 @@ trap cleanup EXIT HUP INT TERM
 [ "${ID:-}" = ubuntu ] || fail 'this verification must run on Ubuntu'
 [ "${VERSION_ID:-}" = 24.04 ] || fail 'Ubuntu 24.04 is required'
 
-for command_name in curl shellcheck sudo mktemp; do
+for command_name in cmp curl shellcheck sudo mktemp; do
     command -v "$command_name" >/dev/null 2>&1 ||
         fail "required command not found: ${command_name}"
 done
@@ -46,7 +47,10 @@ verify_bootstrap() {
         | sudo sh -s -- --verify-only
 }
 
-verify_bootstrap controller "$CONTROLLER_BOOTSTRAP_URL"
+verify_bootstrap controller-tagged "$CONTROLLER_BOOTSTRAP_URL"
+verify_bootstrap controller-latest "$CONTROLLER_LATEST_URL"
+cmp "${TEMP_ROOT}/controller-tagged.sh" "${TEMP_ROOT}/controller-latest.sh" ||
+    fail 'latest-recommended Controller bootstrap differs from the approved tagged bootstrap'
 verify_bootstrap edge-enrollment "$EDGE_BOOTSTRAP_URL"
 
-printf 'Published Ubuntu 24.04 Controller and Edge-enrollment bootstrap verification passed.\n'
+printf 'Published Ubuntu 24.04 tagged/latest Controller and Edge-enrollment bootstrap verification passed.\n'

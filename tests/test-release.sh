@@ -116,6 +116,9 @@ grep -F -- "- Edge asset: \`${EDGE_ARCHIVE_NAME}\`" \
 
 controller_raw_url="https://raw.githubusercontent.com/vivolution/vivolution-install/v${RELEASE_VERSION}/install.sh"
 edge_raw_url="https://raw.githubusercontent.com/vivolution/vivolution-install/v${RELEASE_VERSION}/install-edge.sh"
+controller_latest_url="https://raw.githubusercontent.com/vivolution/vivolution-install/main/install.sh"
+grep -F "$controller_latest_url" "${PUBLIC_ROOT}/README.md" >/dev/null ||
+    fail 'README is missing the permanent latest-recommended Controller command'
 grep -F "$controller_raw_url" "${PUBLIC_ROOT}/README.md" >/dev/null ||
     fail 'README Controller command does not use the release tag'
 grep -F "$edge_raw_url" "${PUBLIC_ROOT}/README.md" >/dev/null ||
@@ -123,6 +126,9 @@ grep -F "$edge_raw_url" "${PUBLIC_ROOT}/README.md" >/dev/null ||
 grep -F "CONTROLLER_BOOTSTRAP_URL='${controller_raw_url}'" \
     "${PUBLIC_ROOT}/tests/verify-published-ubuntu.sh" >/dev/null ||
     fail 'published Ubuntu verifier has a stale Controller URL'
+grep -F "CONTROLLER_LATEST_URL='${controller_latest_url}'" \
+    "${PUBLIC_ROOT}/tests/verify-published-ubuntu.sh" >/dev/null ||
+    fail 'published Ubuntu verifier is missing the latest-recommended Controller URL'
 grep -F "EDGE_BOOTSTRAP_URL='${edge_raw_url}'" \
     "${PUBLIC_ROOT}/tests/verify-published-ubuntu.sh" >/dev/null ||
     fail 'published Ubuntu verifier has a stale Edge URL'

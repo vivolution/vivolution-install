@@ -17,11 +17,29 @@ yet have an independent detached publisher signature.
 
 ## 1. Install standalone Controller CP1
 
-Run this from a normal sudo-enabled account on a fresh Ubuntu Server 24.04 LTS
-machine:
+### Permanent latest-recommended command
+
+Run this same command from a normal sudo-enabled account on every fresh Ubuntu
+Server 24.04 LTS machine:
 
 ```sh
-curl --fail --show-error --silent --location --proto '=https' --tlsv1.2 https://raw.githubusercontent.com/vivolution/vivolution-install/v0.3.0-rc3/install.sh | sudo sh
+curl --fail --show-error --silent --location --proto '=https' --proto-redir '=https' --tlsv1.2 https://raw.githubusercontent.com/vivolution/vivolution-install/main/install.sh | sudo sh
+```
+
+The `main/install.sh` path is Vivolution's mutable **latest-recommended
+channel**. It currently installs `v0.3.0-rc3`. Each approved release advances
+this channel only after its exact version, source commit, asset name, and
+SHA-256 digest have been updated and the release checks pass. The bootstrap
+does not blindly execute an asset selected by the GitHub API: the channel
+script still downloads one exact versioned archive and verifies its embedded
+SHA-256 digest before running it.
+
+### Version-pinned command
+
+Use this form when a deployment must remain reproducible on one exact release:
+
+```sh
+curl --fail --show-error --silent --location --proto '=https' --proto-redir '=https' --tlsv1.2 https://raw.githubusercontent.com/vivolution/vivolution-install/v0.3.0-rc3/install.sh | sudo sh
 ```
 
 This command installs **standalone CP1 only**. CP2, CP3, automatic controller
@@ -73,7 +91,7 @@ This command installs only the outbound Edge enrollment client/placeholder on
 a separate fresh Ubuntu Server 24.04 LTS machine:
 
 ```sh
-curl --fail --show-error --silent --location --proto '=https' --tlsv1.2 https://raw.githubusercontent.com/vivolution/vivolution-install/v0.3.0-rc3/install-edge.sh | sudo sh
+curl --fail --show-error --silent --location --proto '=https' --proto-redir '=https' --tlsv1.2 https://raw.githubusercontent.com/vivolution/vivolution-install/v0.3.0-rc3/install-edge.sh | sudo sh
 ```
 
 It does **not** install or configure an SBC, SIP services, RTP/media, Microsoft
@@ -110,11 +128,11 @@ These commands exercise the download, archive checksum, layout, and content
 checks without installing anything:
 
 ```sh
-curl --fail --show-error --silent --location --proto '=https' --tlsv1.2 \
+curl --fail --show-error --silent --location --proto '=https' --proto-redir '=https' --tlsv1.2 \
   https://raw.githubusercontent.com/vivolution/vivolution-install/v0.3.0-rc3/install.sh \
   | sudo sh -s -- --verify-only
 
-curl --fail --show-error --silent --location --proto '=https' --tlsv1.2 \
+curl --fail --show-error --silent --location --proto '=https' --proto-redir '=https' --tlsv1.2 \
   https://raw.githubusercontent.com/vivolution/vivolution-install/v0.3.0-rc3/install-edge.sh \
   | sudo sh -s -- --verify-only
 ```
