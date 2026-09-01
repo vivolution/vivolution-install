@@ -5,18 +5,18 @@ set -eu
 # accepted only when its complete SHA-256 digest matches this release record.
 RELEASE_VERSION='0.3.0-rc2'
 SOURCE_COMMIT='d0dd678c75cf8fc5f61f03614e092d70c15e2494'
-ARCHIVE_SHA256='3896506c93f5241be39d137705118bbed5738ca9ff1c432c8fef21376687d01a'
-ARCHIVE_NAME="vivolution-controller-${RELEASE_VERSION}.tar.gz"
-ARCHIVE_ROOT="vivolution-controller-${RELEASE_VERSION}"
+ARCHIVE_SHA256='75bf36f88e85106bf51f8122a68b0626f829f834b7c438c86a30218c059f6700'
+ARCHIVE_NAME="vivolution-edge-enrollment-${RELEASE_VERSION}.tar.gz"
+ARCHIVE_ROOT="vivolution-edge-enrollment-${RELEASE_VERSION}"
 ARCHIVE_URL="https://github.com/vivolution/vivolution-install/releases/download/v${RELEASE_VERSION}/${ARCHIVE_NAME}"
-MAX_ARCHIVE_BYTES=26214400
-MAX_ARCHIVE_ENTRIES=2048
+MAX_ARCHIVE_BYTES=8388608
+MAX_ARCHIVE_ENTRIES=512
 BOOTSTRAP_MODE='install'
 
 BOOTSTRAP_TMP=''
 
 fail() {
-    printf 'Vivolution bootstrap: %s\n' "$*" >&2
+    printf 'Vivolution Edge enrollment bootstrap: %s\n' "$*" >&2
     exit 1
 }
 
@@ -33,9 +33,9 @@ require_command() {
 if [ "${1:-}" = '--verify-only' ]; then
     BOOTSTRAP_MODE='verify-only'
     shift
-    if [ "$#" -ne 0 ]; then
-        fail '--verify-only does not accept installer arguments'
-    fi
+fi
+if [ "$#" -ne 0 ]; then
+    fail 'the public bootstrap accepts only --verify-only'
 fi
 
 if [ "$(id -u)" -ne 0 ]; then
@@ -47,7 +47,7 @@ for required_command in curl sha256sum tar awk find wc tr mktemp rm id; do
 done
 
 umask 077
-BOOTSTRAP_TMP=$(mktemp -d "${TMPDIR:-/tmp}/vivolution-bootstrap.XXXXXXXXXX") ||
+BOOTSTRAP_TMP=$(mktemp -d "${TMPDIR:-/tmp}/vivolution-edge-bootstrap.XXXXXXXXXX") ||
     fail 'could not create a private temporary directory'
 trap cleanup EXIT HUP INT TERM
 
@@ -56,8 +56,9 @@ listing_path="${BOOTSTRAP_TMP}/archive.list"
 metadata_path="${BOOTSTRAP_TMP}/archive.metadata"
 extract_path="${BOOTSTRAP_TMP}/source"
 
-printf 'Downloading Vivolution Controller %s BETA (standalone CP1 only)...\n' \
+printf 'Downloading Vivolution Edge enrollment client %s BETA...\n' \
     "$RELEASE_VERSION"
+printf 'This installs enrollment/visibility only, not an SBC or voice data plane.\n'
 curl \
     --fail \
     --show-error \
@@ -129,7 +130,7 @@ then
 fi
 
 source_root="${extract_path}/${ARCHIVE_ROOT}"
-installer_path="${source_root}/installer/install.sh"
+installer_path="${source_root}/installer/install-edge.sh"
 if [ ! -d "$source_root" ] || [ -L "$source_root" ]; then
     fail 'verified release archive did not create the expected source directory'
 fi
@@ -137,14 +138,16 @@ if [ -n "$(find "$source_root" -type l -print -quit)" ]; then
     fail 'verified release archive contains a symbolic link'
 fi
 if [ ! -f "$installer_path" ] || [ -L "$installer_path" ] || [ ! -x "$installer_path" ]; then
-    fail 'verified release archive is missing its executable installer entry point'
+    fail 'verified release archive is missing its executable enrollment entry point'
 fi
 for required_path in \
-    controller/Containerfile \
-    controller/requirements.lock \
-    installer/vivo_cp_installer.py \
-    installer/ansible/install-controller.yml \
-    deploy/roles/controller_services/tasks/main.yml
+    installer/ansible/ansible.cfg \
+    edge/enrollment/release.py \
+    edge/enrollment/cli.py \
+    edge/enrollment/client.py \
+    deploy/playbooks/install-edge-enrollment-local.yml \
+    deploy/roles/edge_enrollment_install/tasks/main.yml \
+    deploy/roles/edge_enrollment_install/defaults/main.yml
 do
     if [ ! -f "${source_root}/${required_path}" ] || [ -L "${source_root}/${required_path}" ]; then
         fail "verified release archive is incomplete: ${required_path}"
@@ -152,14 +155,14 @@ do
 done
 
 if [ "$BOOTSTRAP_MODE" = 'verify-only' ]; then
-    printf 'Vivolution Controller %s BETA archive verification passed; nothing was installed.\n' \
+    printf 'Vivolution Edge enrollment %s BETA archive verification passed; nothing was installed.\n' \
         "$RELEASE_VERSION"
     exit 0
 fi
 
-printf 'Starting the verified Vivolution installer...\n'
+printf 'Starting the verified enrollment-only installer...\n'
 if [ -c /dev/tty ] && ( : </dev/tty ) 2>/dev/null; then
-    "$installer_path" "$@" </dev/tty
+    "$installer_path" </dev/tty
 else
     fail 'no controlling terminal is available; use --verify-only for CI or run the bootstrap from an interactive sudo session'
 fi

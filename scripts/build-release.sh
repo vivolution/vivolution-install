@@ -23,13 +23,26 @@ sha256_file() {
     fi
 }
 
+validate_digest() {
+    digest_value=$1
+    if [ "$digest_value" = PENDING ]; then
+        return 0
+    fi
+    case "$digest_value" in
+        ''|*[!0-9a-f]*)
+            fail 'archive SHA-256 values must be PENDING or 64 lowercase hexadecimal characters'
+            ;;
+    esac
+    if [ "${#digest_value}" -ne 64 ]; then
+        fail 'archive SHA-256 values must be PENDING or 64 lowercase hexadecimal characters'
+    fi
+}
+
 if [ "$#" -ne 1 ]; then
     fail "usage: $0 /path/to/vivolution-controller"
 fi
 
 SOURCE_ROOT=$1
-ARCHIVE_NAME="vivolution-controller-${RELEASE_VERSION}.tar.gz"
-ARCHIVE_ROOT="vivolution-controller-${RELEASE_VERSION}"
 DIST_ROOT="${PUBLIC_ROOT}/dist"
 TEMP_ROOT=''
 
@@ -47,11 +60,8 @@ case "$SOURCE_COMMIT" in
     [0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f]) ;;
     *) fail 'source commit must be a full lowercase SHA-1 object name' ;;
 esac
-case "$ARCHIVE_SHA256" in
-    PENDING) ;;
-    [0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f]) ;;
-    *) fail 'archive SHA-256 must be PENDING or 64 lowercase hexadecimal characters' ;;
-esac
+validate_digest "$CONTROLLER_ARCHIVE_SHA256"
+validate_digest "$EDGE_ENROLLMENT_ARCHIVE_SHA256"
 
 if [ "$(git -C "$SOURCE_ROOT" rev-parse --is-inside-work-tree 2>/dev/null || true)" != true ]; then
     fail "source path is not a Git worktree: ${SOURCE_ROOT}"
@@ -63,66 +73,104 @@ if ! git -C "$SOURCE_ROOT" cat-file -e "${SOURCE_COMMIT}^{commit}"; then
     fail "approved source commit is unavailable: ${SOURCE_COMMIT}"
 fi
 
+mkdir -p "$DIST_ROOT"
+TEMP_ROOT=$(mktemp -d "${TMPDIR:-/tmp}/vivolution-release.XXXXXXXXXX") ||
+    fail 'could not create a private release-build directory'
+
+build_archive() {
+    archive_name=$1
+    archive_root=$2
+    expected_sha256=$3
+    shift 3
+
+    if [ -n "$(git -C "$SOURCE_ROOT" status --porcelain=v1 --untracked-files=all -- "$@")" ]; then
+        fail "approved paths for ${archive_name} contain uncommitted or untracked changes"
+    fi
+    for source_path in "$@"; do
+        if ! git -C "$SOURCE_ROOT" cat-file -e "${SOURCE_COMMIT}:${source_path}"; then
+            fail "approved source path is missing at ${SOURCE_COMMIT}: ${source_path}"
+        fi
+    done
+    if git -C "$SOURCE_ROOT" ls-tree -r "$SOURCE_COMMIT" -- "$@" |
+        awk '$1 == "120000" { found = 1 } END { exit !found }'
+    then
+        fail "approved paths for ${archive_name} contain a symbolic link"
+    fi
+
+    temporary_archive="${TEMP_ROOT}/${archive_name}"
+    git -C "$SOURCE_ROOT" archive \
+        --format=tar.gz \
+        -9 \
+        --prefix="${archive_root}/" \
+        --output="$temporary_archive" \
+        "$SOURCE_COMMIT" \
+        "$@"
+
+    if ! tar -tzf "$temporary_archive" |
+        awk -v prefix="${archive_root}/" '
+            BEGIN { found = 0 }
+            index($0, prefix) != 1 { exit 1 }
+            { found = 1 }
+            END { if (!found) exit 1 }
+        '
+    then
+        fail "${archive_name} has an unexpected path layout"
+    fi
+
+    built_sha256=$(sha256_file "$temporary_archive")
+    if [ "$expected_sha256" != PENDING ] && [ "$built_sha256" != "$expected_sha256" ]; then
+        fail "generated SHA-256 ${built_sha256} does not match the release record for ${archive_name}"
+    fi
+    cp "$temporary_archive" "${DIST_ROOT}/${archive_name}"
+    chmod 0644 "${DIST_ROOT}/${archive_name}"
+}
+
+controller_archive_name="vivolution-controller-${RELEASE_VERSION}.tar.gz"
+controller_archive_root="vivolution-controller-${RELEASE_VERSION}"
 set -- \
     controller \
-    installer \
+    installer/install.sh \
+    installer/vivo_cp_installer.py \
+    installer/ansible \
     deploy/roles/controller_services \
     deploy/roles/pgbouncer \
     deploy/roles/podman \
     deploy/roles/postgres_local
-
-if [ -n "$(git -C "$SOURCE_ROOT" status --porcelain=v1 --untracked-files=all -- "$@")" ]; then
-    fail 'approved release paths contain uncommitted or untracked changes'
-fi
-
-for source_path in "$@"; do
-    if ! git -C "$SOURCE_ROOT" cat-file -e "${SOURCE_COMMIT}:${source_path}"; then
-        fail "approved source path is missing at ${SOURCE_COMMIT}: ${source_path}"
-    fi
-done
-
-if git -C "$SOURCE_ROOT" ls-tree -r "$SOURCE_COMMIT" -- "$@" |
-    awk '$1 == "120000" { found = 1 } END { exit !found }'
-then
-    fail 'approved release paths contain a symbolic link'
-fi
-
-mkdir -p "$DIST_ROOT"
-TEMP_ROOT=$(mktemp -d "${TMPDIR:-/tmp}/vivolution-release.XXXXXXXXXX") ||
-    fail 'could not create a private release-build directory'
-temporary_archive="${TEMP_ROOT}/${ARCHIVE_NAME}"
-
-git -C "$SOURCE_ROOT" archive \
-    --format=tar.gz \
-    -9 \
-    --prefix="${ARCHIVE_ROOT}/" \
-    --output="$temporary_archive" \
-    "$SOURCE_COMMIT" \
+build_archive \
+    "$controller_archive_name" \
+    "$controller_archive_root" \
+    "$CONTROLLER_ARCHIVE_SHA256" \
     "$@"
+controller_actual_sha256=$built_sha256
 
-if ! tar -tzf "$temporary_archive" |
-    awk -v prefix="${ARCHIVE_ROOT}/" '
-        BEGIN { found = 0 }
-        index($0, prefix) != 1 { exit 1 }
-        { found = 1 }
-        END { if (!found) exit 1 }
-    '
-then
-    fail 'generated archive has an unexpected path layout'
-fi
+edge_archive_name="vivolution-edge-enrollment-${RELEASE_VERSION}.tar.gz"
+edge_archive_root="vivolution-edge-enrollment-${RELEASE_VERSION}"
+set -- \
+    installer/install-edge.sh \
+    installer/ansible/ansible.cfg \
+    edge/enrollment \
+    deploy/playbooks/install-edge-enrollment-local.yml \
+    deploy/roles/edge_enrollment_install
+build_archive \
+    "$edge_archive_name" \
+    "$edge_archive_root" \
+    "$EDGE_ENROLLMENT_ARCHIVE_SHA256" \
+    "$@"
+edge_actual_sha256=$built_sha256
 
-actual_sha256=$(sha256_file "$temporary_archive")
-if [ "$ARCHIVE_SHA256" != PENDING ] && [ "$actual_sha256" != "$ARCHIVE_SHA256" ]; then
-    fail "generated SHA-256 ${actual_sha256} does not match release.conf ${ARCHIVE_SHA256}"
-fi
+{
+    printf '%s  %s\n' "$controller_actual_sha256" "$controller_archive_name"
+    printf '%s  %s\n' "$edge_actual_sha256" "$edge_archive_name"
+} > "${DIST_ROOT}/SHA256SUMS"
+chmod 0644 "${DIST_ROOT}/SHA256SUMS"
 
-cp "$temporary_archive" "${DIST_ROOT}/${ARCHIVE_NAME}"
-printf '%s  %s\n' "$actual_sha256" "$ARCHIVE_NAME" > "${DIST_ROOT}/SHA256SUMS"
-chmod 0644 "${DIST_ROOT}/${ARCHIVE_NAME}" "${DIST_ROOT}/SHA256SUMS"
-
-printf 'Built %s\n' "${DIST_ROOT}/${ARCHIVE_NAME}"
-printf 'SHA-256 %s\n' "$actual_sha256"
+printf 'Built %s\n' "${DIST_ROOT}/${controller_archive_name}"
+printf 'Controller SHA-256 %s\n' "$controller_actual_sha256"
+printf 'Built %s\n' "${DIST_ROOT}/${edge_archive_name}"
+printf 'Edge enrollment SHA-256 %s\n' "$edge_actual_sha256"
 printf 'Source commit %s\n' "$SOURCE_COMMIT"
-if [ "$ARCHIVE_SHA256" = PENDING ]; then
-    printf 'Set ARCHIVE_SHA256 to this digest in release.conf and install.sh, then rebuild.\n'
+if [ "$CONTROLLER_ARCHIVE_SHA256" = PENDING ] ||
+   [ "$EDGE_ENROLLMENT_ARCHIVE_SHA256" = PENDING ]
+then
+    printf 'Set both digests in release.conf and their respective bootstraps, then rebuild.\n'
 fi

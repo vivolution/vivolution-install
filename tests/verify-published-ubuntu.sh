@@ -1,8 +1,9 @@
 #!/bin/sh
 set -eu
 
-BOOTSTRAP_URL='https://raw.githubusercontent.com/vivolution/vivolution-install/v0.3.0-rc1/install.sh'
-TEMP_SCRIPT=''
+CONTROLLER_BOOTSTRAP_URL='https://raw.githubusercontent.com/vivolution/vivolution-install/v0.3.0-rc2/install.sh'
+EDGE_BOOTSTRAP_URL='https://raw.githubusercontent.com/vivolution/vivolution-install/v0.3.0-rc2/install-edge.sh'
+TEMP_ROOT=''
 
 fail() {
     printf 'Published-release verification: %s\n' "$*" >&2
@@ -10,8 +11,8 @@ fail() {
 }
 
 cleanup() {
-    if [ -n "$TEMP_SCRIPT" ] && [ -f "$TEMP_SCRIPT" ]; then
-        rm -f -- "$TEMP_SCRIPT"
+    if [ -n "$TEMP_ROOT" ] && [ -d "$TEMP_ROOT" ]; then
+        rm -rf -- "$TEMP_ROOT"
     fi
 }
 trap cleanup EXIT HUP INT TERM
@@ -22,23 +23,30 @@ trap cleanup EXIT HUP INT TERM
 [ "${ID:-}" = ubuntu ] || fail 'this verification must run on Ubuntu'
 [ "${VERSION_ID:-}" = 24.04 ] || fail 'Ubuntu 24.04 is required'
 
-for command_name in curl shellcheck sudo; do
+for command_name in curl shellcheck sudo mktemp; do
     command -v "$command_name" >/dev/null 2>&1 ||
         fail "required command not found: ${command_name}"
 done
 
-TEMP_SCRIPT=$(mktemp "${TMPDIR:-/tmp}/vivolution-published.XXXXXXXXXX") ||
-    fail 'could not create a temporary file'
+TEMP_ROOT=$(mktemp -d "${TMPDIR:-/tmp}/vivolution-published.XXXXXXXXXX") ||
+    fail 'could not create a temporary directory'
 
-curl --fail --show-error --silent --location \
-    --proto '=https' --tlsv1.2 \
-    --output "$TEMP_SCRIPT" \
-    "$BOOTSTRAP_URL"
-shellcheck "$TEMP_SCRIPT"
+verify_bootstrap() {
+    label=$1
+    url=$2
+    script_path="${TEMP_ROOT}/${label}.sh"
+    curl --fail --show-error --silent --location \
+        --proto '=https' --tlsv1.2 \
+        --output "$script_path" \
+        "$url"
+    shellcheck "$script_path"
+    curl --fail --show-error --silent --location \
+        --proto '=https' --tlsv1.2 \
+        "$url" \
+        | sudo sh -s -- --verify-only
+}
 
-curl --fail --show-error --silent --location \
-    --proto '=https' --tlsv1.2 \
-    "$BOOTSTRAP_URL" \
-    | sudo sh -s -- --verify-only
+verify_bootstrap controller "$CONTROLLER_BOOTSTRAP_URL"
+verify_bootstrap edge-enrollment "$EDGE_BOOTSTRAP_URL"
 
-printf 'Published Ubuntu 24.04 bootstrap verification passed.\n'
+printf 'Published Ubuntu 24.04 Controller and Edge-enrollment bootstrap verification passed.\n'
