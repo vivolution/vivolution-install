@@ -1,9 +1,9 @@
 #!/bin/sh
 set -eu
 
-CONTROLLER_BOOTSTRAP_URL='https://raw.githubusercontent.com/vivolution/vivolution-install/v0.3.0-rc5/install.sh'
+CONTROLLER_BOOTSTRAP_URL='https://raw.githubusercontent.com/vivolution/vivolution-install/v0.3.0-rc6/install.sh'
 CONTROLLER_LATEST_URL='https://raw.githubusercontent.com/vivolution/vivolution-install/main/install.sh'
-EDGE_BOOTSTRAP_URL='https://raw.githubusercontent.com/vivolution/vivolution-install/v0.3.0-rc5/install-edge.sh'
+EDGE_BOOTSTRAP_URL='https://raw.githubusercontent.com/vivolution/vivolution-install/v0.3.0-rc6/install-edge.sh'
 TEMP_ROOT=''
 
 fail() {
@@ -37,12 +37,12 @@ verify_bootstrap() {
     url=$2
     script_path="${TEMP_ROOT}/${label}.sh"
     curl --fail --show-error --silent --location \
-        --proto '=https' --tlsv1.2 \
+        --proto '=https' --proto-redir '=https' --tlsv1.2 \
         --output "$script_path" \
         "$url"
     shellcheck "$script_path"
     curl --fail --show-error --silent --location \
-        --proto '=https' --tlsv1.2 \
+        --proto '=https' --proto-redir '=https' --tlsv1.2 \
         "$url" \
         | sudo sh -s -- --verify-only
 }
@@ -54,15 +54,15 @@ cmp "${TEMP_ROOT}/controller-tagged.sh" "${TEMP_ROOT}/controller-latest.sh" ||
 verify_bootstrap edge-enrollment "$EDGE_BOOTSTRAP_URL"
 
 curl --fail --show-error --silent --location \
-    --proto '=https' --tlsv1.2 \
+    --proto '=https' --proto-redir '=https' --tlsv1.2 \
     "$CONTROLLER_BOOTSTRAP_URL" \
     | sudo sh -s -- check-host-os
 curl --fail --show-error --silent --location \
-    --proto '=https' --tlsv1.2 \
+    --proto '=https' --proto-redir '=https' --tlsv1.2 \
     "$CONTROLLER_LATEST_URL" \
     | sudo sh -s -- check-host-os
 curl --fail --show-error --silent --location \
-    --proto '=https' --tlsv1.2 \
+    --proto '=https' --proto-redir '=https' --tlsv1.2 \
     "$EDGE_BOOTSTRAP_URL" \
     | sudo sh -s -- --check-host-os
 

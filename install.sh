@@ -3,9 +3,9 @@ set -eu
 
 # These values are immutable for this tagged bootstrap. The source archive is
 # accepted only when its complete SHA-256 digest matches this release record.
-RELEASE_VERSION='0.3.0-rc5'
-SOURCE_COMMIT='ddb82c209554dd31390f93abb3cd17faf2380729'
-ARCHIVE_SHA256='f03fc234183c7fc8358768afb51048cf4c5041666599ca143a0dddb699c9fc60'
+RELEASE_VERSION='0.3.0-rc6'
+SOURCE_COMMIT='59c074df7f11d37c2a63d804485d5f5885156b96'
+ARCHIVE_SHA256='82e543423d7aca8483ac5c5d8b9ca8624e77baf110fbc10d1f8f6efd7ca7464a'
 ARCHIVE_NAME="vivolution-controller-${RELEASE_VERSION}.tar.gz"
 ARCHIVE_ROOT="vivolution-controller-${RELEASE_VERSION}"
 ARCHIVE_URL="https://github.com/vivolution/vivolution-install/releases/download/v${RELEASE_VERSION}/${ARCHIVE_NAME}"
@@ -56,8 +56,9 @@ listing_path="${BOOTSTRAP_TMP}/archive.list"
 metadata_path="${BOOTSTRAP_TMP}/archive.metadata"
 extract_path="${BOOTSTRAP_TMP}/source"
 
-printf 'Downloading Vivolution Controller %s BETA (standalone CP1 only)...\n' \
+printf 'Downloading Vivolution Turnkey Installer %s BETA...\n' \
     "$RELEASE_VERSION"
+printf 'Enabled role: create one standalone Controller Plane; join and SBC deployment remain unavailable.\n'
 curl \
     --fail \
     --show-error \
@@ -152,7 +153,7 @@ do
 done
 
 if [ "$BOOTSTRAP_MODE" = 'verify-only' ]; then
-    printf 'Vivolution Controller %s BETA archive verification passed; nothing was installed.\n' \
+    printf 'Vivolution Turnkey Installer %s BETA archive verification passed; nothing was installed.\n' \
         "$RELEASE_VERSION"
     exit 0
 fi

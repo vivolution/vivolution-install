@@ -131,9 +131,9 @@ edge_raw_url="https://raw.githubusercontent.com/vivolution/vivolution-install/v$
 controller_latest_url="https://raw.githubusercontent.com/vivolution/vivolution-install/main/install.sh"
 grep -F "$controller_latest_url" "${PUBLIC_ROOT}/README.md" >/dev/null ||
     fail 'README is missing the permanent latest-recommended Controller command'
-grep -F "$controller_latest_url | sudo sh -s -- resume" \
+grep -F "$controller_raw_url | sudo sh -s -- resume" \
     "${PUBLIC_ROOT}/README.md" >/dev/null ||
-    fail 'README is missing the failed-preflight resume command'
+    fail 'README is missing the version-pinned failed-preflight resume command'
 grep -F "$controller_raw_url" "${PUBLIC_ROOT}/README.md" >/dev/null ||
     fail 'README Controller command does not use the release tag'
 grep -F "$edge_raw_url" "${PUBLIC_ROOT}/README.md" >/dev/null ||
@@ -184,8 +184,37 @@ grep -F 'email {{ cp_acme_email | to_json }}' "$controller_caddyfile" >/dev/null
 if grep -i -E 'zerossl|tls[[:space:]]+internal' "$controller_caddyfile" >/dev/null; then
     fail 'packaged Controller contains an alternate or local certificate issuer'
 fi
-grep -F 'LEDGER_SCHEMA_VERSION = 4' "$controller_installer" >/dev/null ||
-    fail 'packaged Controller does not refuse the rc2 installer ledger schema'
+grep -F 'INSTALLER_VERSION = "0.3.0-rc6"' "$controller_installer" >/dev/null ||
+    fail 'packaged launcher has a stale internal version'
+grep -F 'LEDGER_SCHEMA_VERSION = 5' "$controller_installer" >/dev/null ||
+    fail 'packaged launcher does not use the rc6 schema-5 ledger'
+grep -F 'DEFAULT_STATE_DIR = "/var/lib/vivolution/installer"' \
+    "$controller_installer" >/dev/null ||
+    fail 'packaged launcher does not use the secured rc6 state namespace'
+grep -F 'DEFAULT_LOG_DIR = "/var/log/vivolution/installer"' \
+    "$controller_installer" >/dev/null ||
+    fail 'packaged launcher does not use the secured rc6 log namespace'
+for menu_label in \
+    'Create a new Controller Plane' \
+    'Join an existing Controller Plane' \
+    'Deploy an Edge Appliance (SBC)' \
+    'Manage an existing installation' \
+    'Diagnostics / network readiness test'
+do
+    grep -F "$menu_label" "$controller_installer" >/dev/null ||
+        fail "packaged launcher is missing menu label: ${menu_label}"
+done
+grep -F '("join-controller", "Join an existing Controller Plane", False)' \
+    "$controller_installer" >/dev/null ||
+    fail 'packaged launcher unexpectedly enables Controller joining'
+grep -F '("deploy-edge", "Deploy an Edge Appliance (SBC)", False)' \
+    "$controller_installer" >/dev/null ||
+    fail 'packaged launcher unexpectedly enables full SBC deployment'
+grep -F 'DISCARD_CONFIRMATION_TOKEN = "DISCARD-INCOMPLETE"' \
+    "$controller_installer" >/dev/null ||
+    fail 'packaged launcher is missing guarded incomplete-run cleanup'
+grep -F '_authorization_pattern = re.compile(' "$controller_installer" >/dev/null ||
+    fail 'packaged launcher is missing pattern-based authorization redaction'
 grep -F "Let's Encrypt ACME contact email" "$controller_installer" >/dev/null ||
     fail 'packaged Controller does not ask for the ACME contact email'
 grep -F 'detected_ssh_cidr = current_ssh_client_cidr' "$controller_installer" >/dev/null ||
