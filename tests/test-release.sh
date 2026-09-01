@@ -113,6 +113,12 @@ grep -F -- "- Controller asset: \`${CONTROLLER_ARCHIVE_NAME}\`" \
 grep -F -- "- Edge asset: \`${EDGE_ARCHIVE_NAME}\`" \
     "${PUBLIC_ROOT}/README.md" >/dev/null ||
     fail 'README Edge asset name does not match release.conf'
+grep -F -- '**Enforced installer minimum:** 2 vCPU, 4 GiB RAM, and a 40 GB root disk.' \
+    "${PUBLIC_ROOT}/README.md" >/dev/null ||
+    fail 'README does not state the enforced Controller capacity minimum'
+grep -F -- "On Azure, use \`Standard_D2as_v5\` with a 64 GiB Premium" \
+    "${PUBLIC_ROOT}/README.md" >/dev/null ||
+    fail 'README does not state the qualified Controller POC size'
 
 controller_raw_url="https://raw.githubusercontent.com/vivolution/vivolution-install/v${RELEASE_VERSION}/install.sh"
 edge_raw_url="https://raw.githubusercontent.com/vivolution/vivolution-install/v${RELEASE_VERSION}/install-edge.sh"

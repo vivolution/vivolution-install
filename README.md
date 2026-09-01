@@ -46,6 +46,21 @@ This command installs **standalone CP1 only**. CP2, CP3, automatic controller
 failover, the SBC voice data plane, Microsoft Teams, and SIP carriers are not
 silently installed.
 
+### Controller VM sizing
+
+- **Enforced installer minimum:** 2 vCPU, 4 GiB RAM, and a 40 GB root disk.
+- **Recommended for the current POC/test:** 2 vCPU, 8 GiB RAM, and a 64 GiB
+  SSD-backed root disk. On Azure, use `Standard_D2as_v5` with a 64 GiB Premium
+  SSD LRS OS disk.
+- **Starting point for a production pilot:** 4 vCPU, 16 GiB RAM, and at least a
+  128 GiB Premium SSD, followed by measurement-based resizing and off-VM
+  backups.
+
+Avoid burstable CPU SKUs for a Controller that will run continuously. This
+standalone CP1 hosts PostgreSQL, PgBouncer, Caddy, and the Controller application
+on the same VM. The production-pilot figure is planning guidance, not a claim
+that this prerelease is production-qualified.
+
 ### Controller addresses requested by the wizard
 
 The installer is domain-neutral. It does not hard-code
