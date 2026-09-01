@@ -23,6 +23,27 @@ qualification. CP2,
 CP3, SBC, carrier, and Teams configuration are separate modules and are not
 silently installed by this command.
 
+## Controller addresses requested by the wizard
+
+The installer is domain-neutral and does not hard-code
+`controller.voice.vivolution.ae`. It asks for two distinct DNS hostnames; enter
+hostnames only, without `https://` or a path:
+
+- **Controller VM FQDN** — the unique address of this controller node, for
+  example `cp1.cloudpremises.com`.
+- **Controller shared FQDN** — the stable central address that operators and
+  future SBC Edge nodes will use, for example `probe.cloudpremises.com` or
+  `cp.cloudved.com`.
+
+For the current standalone CP1 release, both public DNS A records must resolve
+only to the Ubuntu machine's declared public IPv4 address. In a future qualified
+multi-controller deployment, each controller keeps its unique node FQDN while
+the shared FQDN remains stable in front of the controller service.
+
+SBC Edge enrollment is not included in this release candidate. Its separate
+installer will use the shared controller URL plus a short-lived, one-time
+enrollment token; it must not use a persistent shared node password.
+
 The piped bootstrap explicitly reopens `/dev/tty` before starting the
 interactive installer. It fails clearly when no controlling terminal exists;
 it never lets an interactive installation continue on the exhausted curl
