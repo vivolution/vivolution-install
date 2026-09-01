@@ -188,6 +188,10 @@ grep -F 'LEDGER_SCHEMA_VERSION = 4' "$controller_installer" >/dev/null ||
     fail 'packaged Controller does not refuse the rc2 installer ledger schema'
 grep -F "Let's Encrypt ACME contact email" "$controller_installer" >/dev/null ||
     fail 'packaged Controller does not ask for the ACME contact email'
+grep -F 'detected_ssh_cidr = current_ssh_client_cidr' "$controller_installer" >/dev/null ||
+    fail 'packaged Controller does not default to a validated active SSH source'
+grep -F '0.0.0.0/0 is intentionally refused' "$controller_installer" >/dev/null ||
+    fail 'packaged Controller does not explain its world-open SSH refusal'
 grep -F 'link_target == "../usr/lib/os-release"' "$controller_installer" >/dev/null ||
     fail 'packaged Controller does not accept the canonical Ubuntu OS metadata link'
 for host_check_installer in "$controller_installer" "$edge_installer"; do

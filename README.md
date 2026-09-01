@@ -27,7 +27,7 @@ curl --fail --show-error --silent --location --proto '=https' --proto-redir '=ht
 ```
 
 The `main/install.sh` path is Vivolution's mutable **latest-recommended
-channel**. It currently installs `v0.3.0-rc4`. Each approved release advances
+channel**. It currently installs `v0.3.0-rc5`. Each approved release advances
 this channel only after its exact version, source commit, asset name, and
 SHA-256 digest have been updated and the release checks pass. The bootstrap
 does not blindly execute an asset selected by the GitHub API: the channel
@@ -39,7 +39,7 @@ SHA-256 digest before running it.
 Use this form when a deployment must remain reproducible on one exact release:
 
 ```sh
-curl --fail --show-error --silent --location --proto '=https' --proto-redir '=https' --tlsv1.2 https://raw.githubusercontent.com/vivolution/vivolution-install/v0.3.0-rc4/install.sh | sudo sh
+curl --fail --show-error --silent --location --proto '=https' --proto-redir '=https' --tlsv1.2 https://raw.githubusercontent.com/vivolution/vivolution-install/v0.3.0-rc5/install.sh | sudo sh
 ```
 
 This command installs **standalone CP1 only**. CP2, CP3, automatic controller
@@ -79,6 +79,24 @@ record. Allow inbound TCP 22, 80, and 443. In a future qualified
 multi-controller deployment, each Controller keeps its unique VM FQDN while
 the shared FQDN remains stable in front of the Controller service.
 
+### SSH administrator source restriction
+
+The installer permits up to sixteen exact IPv4 `/32` administrator sources; it
+does not open SSH to the whole Internet. When the active SSH client address is
+available through `SSH_CONNECTION`, the wizard displays that exact `/32` as the
+default and pressing Enter accepts it. If `sudo` does not preserve that
+metadata, a blank or invalid value re-prompts only this field. Enter the public
+IPv4 address from which you administer the VM followed by `/32`; additional
+trusted addresses may be comma-separated. `0.0.0.0/0` is intentionally
+refused.
+
+From the same non-root SSH shell, this prints the usual value to enter when
+automatic detection is unavailable:
+
+```sh
+printf '%s\n' "$SSH_CONNECTION" | awk 'NF == 4 { print $1 "/32" }'
+```
+
 ### Let's Encrypt certificates
 
 The wizard asks for a **Let's Encrypt ACME contact email**, defaulting to the
@@ -93,15 +111,15 @@ If public issuance is unavailable, the trusted HTTPS readiness checks fail the
 installation instead of accepting an untrusted certificate. Before installing,
 ensure both A records are fully propagated, remove stale/incorrect AAAA records,
 make public TCP 80/443 reach this VM, and permit `letsencrypt.org` in any CAA
-policy. This rc4 candidate requires a fresh host or an rc3 run that stopped in
-the initial read-only OS preflight; it does not claim to convert certificates
-cached by an rc2 installation.
+policy. This rc5 candidate requires a fresh host or an rc3/rc4 run that stopped
+before host mutation; it does not claim to convert certificates cached by an
+rc2 installation.
 
 Stock Ubuntu 24.04 normally exposes `/etc/os-release` as the canonical relative
-symlink `../usr/lib/os-release`. rc4 accepts that exact safe layout and adds a
-non-installing packaged host-OS check. If rc3 stopped with `OS metadata is
-missing or unsafe` before asking any configuration questions, resume the same
-protected ledger after rc4 is promoted with this one-time recovery command:
+symlink `../usr/lib/os-release`. rc4 and later accept that exact safe layout and
+add a non-installing packaged host-OS check. If rc3 stopped with `OS metadata is
+missing or unsafe`, or rc4 stopped after a blank SSH source answer, resume the
+same protected ledger with this one-time recovery command:
 
 ```sh
 curl --fail --show-error --silent --location --proto '=https' --proto-redir '=https' --tlsv1.2 https://raw.githubusercontent.com/vivolution/vivolution-install/main/install.sh | sudo sh -s -- resume
@@ -117,7 +135,7 @@ This command installs only the outbound Edge enrollment client/placeholder on
 a separate fresh Ubuntu Server 24.04 LTS machine:
 
 ```sh
-curl --fail --show-error --silent --location --proto '=https' --proto-redir '=https' --tlsv1.2 https://raw.githubusercontent.com/vivolution/vivolution-install/v0.3.0-rc4/install-edge.sh | sudo sh
+curl --fail --show-error --silent --location --proto '=https' --proto-redir '=https' --tlsv1.2 https://raw.githubusercontent.com/vivolution/vivolution-install/v0.3.0-rc5/install-edge.sh | sudo sh
 ```
 
 It does **not** install or configure an SBC, SIP services, RTP/media, Microsoft
@@ -155,11 +173,11 @@ checks without installing anything:
 
 ```sh
 curl --fail --show-error --silent --location --proto '=https' --proto-redir '=https' --tlsv1.2 \
-  https://raw.githubusercontent.com/vivolution/vivolution-install/v0.3.0-rc4/install.sh \
+  https://raw.githubusercontent.com/vivolution/vivolution-install/v0.3.0-rc5/install.sh \
   | sudo sh -s -- --verify-only
 
 curl --fail --show-error --silent --location --proto '=https' --proto-redir '=https' --tlsv1.2 \
-  https://raw.githubusercontent.com/vivolution/vivolution-install/v0.3.0-rc4/install-edge.sh \
+  https://raw.githubusercontent.com/vivolution/vivolution-install/v0.3.0-rc5/install-edge.sh \
   | sudo sh -s -- --verify-only
 ```
 
@@ -172,22 +190,22 @@ compatibility check without creating installer state or installing packages:
 
 ```sh
 curl --fail --show-error --silent --location --proto '=https' --proto-redir '=https' --tlsv1.2 \
-  https://raw.githubusercontent.com/vivolution/vivolution-install/v0.3.0-rc4/install.sh \
+  https://raw.githubusercontent.com/vivolution/vivolution-install/v0.3.0-rc5/install.sh \
   | sudo sh -s -- check-host-os
 
 curl --fail --show-error --silent --location --proto '=https' --proto-redir '=https' --tlsv1.2 \
-  https://raw.githubusercontent.com/vivolution/vivolution-install/v0.3.0-rc4/install-edge.sh \
+  https://raw.githubusercontent.com/vivolution/vivolution-install/v0.3.0-rc5/install-edge.sh \
   | sudo sh -s -- --check-host-os
 ```
 
 ## Immutable release record
 
-- Public release: `v0.3.0-rc4`
-- Approved private source commit: `337f8717c72d4734e78195ac83a02828ab424738`
-- Controller asset: `vivolution-controller-0.3.0-rc4.tar.gz`
-- Controller asset SHA-256: `5e2d24d490defbac3da3f6792a6cfdee5c0bfbe39635a497f693b3b4bb80a5db`
-- Edge asset: `vivolution-edge-enrollment-0.3.0-rc4.tar.gz`
-- Edge asset SHA-256: `888f9cec11162930e99fd224345ca122d35476e7b803357b9155f7df2371ed9b`
+- Public release: `v0.3.0-rc5`
+- Approved private source commit: `ddb82c209554dd31390f93abb3cd17faf2380729`
+- Controller asset: `vivolution-controller-0.3.0-rc5.tar.gz`
+- Controller asset SHA-256: `f03fc234183c7fc8358768afb51048cf4c5041666599ca143a0dddb699c9fc60`
+- Edge asset: `vivolution-edge-enrollment-0.3.0-rc5.tar.gz`
+- Edge asset SHA-256: `d4ddcbfc7e55a6887abbb8158c8806da8868891d2b96d61f86f29a1b96f6373d`
 
 Both assets are built from the same immutable private source commit but have
 separate explicit reviewed allowlists. The release test proves that the Controller's
