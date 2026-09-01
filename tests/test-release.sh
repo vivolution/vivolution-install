@@ -171,6 +171,9 @@ edge_release_root="${edge_extract}/${EDGE_ARCHIVE_ROOT}"
 
 controller_caddyfile="${controller_release_root}/installer/ansible/roles/ubuntu_ingress/templates/Caddyfile.j2"
 controller_installer="${controller_release_root}/installer/vivo_cp_installer.py"
+controller_base_defaults="${controller_release_root}/installer/ansible/roles/ubuntu_base_os/defaults/main.yml"
+controller_base_tasks="${controller_release_root}/installer/ansible/roles/ubuntu_base_os/tasks/main.yml"
+controller_quadlet="${controller_release_root}/deploy/roles/controller_services/templates/vivolution-cp-web.container.j2"
 edge_installer="${edge_release_root}/installer/install-edge.sh"
 issuer_count=$(awk 'index($0, "cert_issuer acme") { count++ } END { print count + 0 }' \
     "$controller_caddyfile")
@@ -184,16 +187,35 @@ grep -F 'email {{ cp_acme_email | to_json }}' "$controller_caddyfile" >/dev/null
 if grep -i -E 'zerossl|tls[[:space:]]+internal' "$controller_caddyfile" >/dev/null; then
     fail 'packaged Controller contains an alternate or local certificate issuer'
 fi
-grep -F 'INSTALLER_VERSION = "0.3.0-rc7"' "$controller_installer" >/dev/null ||
+grep -F "cp_caddy_package_version: '2.11.4'" "$controller_base_defaults" >/dev/null ||
+    fail 'packaged Controller does not pin the qualified Caddy release'
+grep -F '65760C51EDEA2017CEA2CA15155B6D79CA56EA34' "$controller_base_defaults" >/dev/null ||
+    fail 'packaged Controller does not pin the full Caddy primary-key fingerprint'
+grep -F '783dfee04b19e851a928cd87b34710213ebbe7628f98d9f34595ab83be578c00' "$controller_base_defaults" >/dev/null ||
+    fail 'packaged Controller does not pin the Caddy key-file SHA-256'
+grep -F 'caddy-stable.sources' "$controller_base_tasks" >/dev/null ||
+    fail 'packaged Controller does not configure the verified Caddy repository'
+grep -F 'Pin-Priority: 1001' "$controller_base_tasks" >/dev/null ||
+    fail 'packaged Controller does not pin the exact Caddy APT candidate'
+grep -F 'argv: [/usr/sbin/runc, --version]' "$controller_base_tasks" >/dev/null ||
+    fail 'packaged Controller does not prove the selected runc runtime'
+grep -F 'PodmanArgs=--runtime=/usr/sbin/runc' "$controller_quadlet" >/dev/null ||
+    fail 'packaged Controller Quadlet does not pin runc'
+grep -F 'NoNewPrivileges=true' "$controller_quadlet" >/dev/null ||
+    fail 'packaged Controller Quadlet lost no-new-privileges enforcement'
+if grep -F 'apparmor=unconfined' "$controller_quadlet" >/dev/null; then
+    fail 'packaged Controller weakens AppArmor confinement'
+fi
+grep -F 'INSTALLER_VERSION = "0.3.0-rc8"' "$controller_installer" >/dev/null ||
     fail 'packaged launcher has a stale internal version'
 grep -F 'LEDGER_SCHEMA_VERSION = 5' "$controller_installer" >/dev/null ||
-    fail 'packaged launcher does not use the rc7 schema-5 ledger'
+    fail 'packaged launcher does not use the rc8 schema-5 ledger'
 grep -F 'DEFAULT_STATE_DIR = "/var/lib/vivolution/installer"' \
     "$controller_installer" >/dev/null ||
-    fail 'packaged launcher does not use the secured rc7 state namespace'
+    fail 'packaged launcher does not use the secured rc8 state namespace'
 grep -F 'DEFAULT_LOG_DIR = "/var/log/vivolution/installer"' \
     "$controller_installer" >/dev/null ||
-    fail 'packaged launcher does not use the secured rc7 log namespace'
+    fail 'packaged launcher does not use the secured rc8 log namespace'
 for menu_label in \
     'Create a new Controller Plane' \
     'Join an existing Controller Plane' \
