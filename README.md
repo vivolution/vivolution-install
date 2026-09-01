@@ -27,7 +27,7 @@ curl --fail --show-error --silent --location --proto '=https' --proto-redir '=ht
 ```
 
 The `main/install.sh` path is Vivolution's mutable **latest-recommended
-channel**. It currently installs `v0.3.0-rc3`. Each approved release advances
+channel**. It currently installs `v0.3.0-rc4`. Each approved release advances
 this channel only after its exact version, source commit, asset name, and
 SHA-256 digest have been updated and the release checks pass. The bootstrap
 does not blindly execute an asset selected by the GitHub API: the channel
@@ -39,7 +39,7 @@ SHA-256 digest before running it.
 Use this form when a deployment must remain reproducible on one exact release:
 
 ```sh
-curl --fail --show-error --silent --location --proto '=https' --proto-redir '=https' --tlsv1.2 https://raw.githubusercontent.com/vivolution/vivolution-install/v0.3.0-rc3/install.sh | sudo sh
+curl --fail --show-error --silent --location --proto '=https' --proto-redir '=https' --tlsv1.2 https://raw.githubusercontent.com/vivolution/vivolution-install/v0.3.0-rc4/install.sh | sudo sh
 ```
 
 This command installs **standalone CP1 only**. CP2, CP3, automatic controller
@@ -93,8 +93,19 @@ If public issuance is unavailable, the trusted HTTPS readiness checks fail the
 installation instead of accepting an untrusted certificate. Before installing,
 ensure both A records are fully propagated, remove stale/incorrect AAAA records,
 make public TCP 80/443 reach this VM, and permit `letsencrypt.org` in any CAA
-policy. This rc3 candidate requires a fresh host; it does not claim to convert
-certificates cached by an rc2 installation.
+policy. This rc4 candidate requires a fresh host or an rc3 run that stopped in
+the initial read-only OS preflight; it does not claim to convert certificates
+cached by an rc2 installation.
+
+Stock Ubuntu 24.04 normally exposes `/etc/os-release` as the canonical relative
+symlink `../usr/lib/os-release`. rc4 accepts that exact safe layout and adds a
+non-installing packaged host-OS check. If rc3 stopped with `OS metadata is
+missing or unsafe` before asking any configuration questions, resume the same
+protected ledger after rc4 is promoted with this one-time recovery command:
+
+```sh
+curl --fail --show-error --silent --location --proto '=https' --proto-redir '=https' --tlsv1.2 https://raw.githubusercontent.com/vivolution/vivolution-install/main/install.sh | sudo sh -s -- resume
+```
 
 This automation covers the Controller web/API certificate only. Future SBC
 certificates for Microsoft Teams Direct Routing and SIP trunks use a separate
@@ -106,7 +117,7 @@ This command installs only the outbound Edge enrollment client/placeholder on
 a separate fresh Ubuntu Server 24.04 LTS machine:
 
 ```sh
-curl --fail --show-error --silent --location --proto '=https' --proto-redir '=https' --tlsv1.2 https://raw.githubusercontent.com/vivolution/vivolution-install/v0.3.0-rc3/install-edge.sh | sudo sh
+curl --fail --show-error --silent --location --proto '=https' --proto-redir '=https' --tlsv1.2 https://raw.githubusercontent.com/vivolution/vivolution-install/v0.3.0-rc4/install-edge.sh | sudo sh
 ```
 
 It does **not** install or configure an SBC, SIP services, RTP/media, Microsoft
@@ -144,11 +155,11 @@ checks without installing anything:
 
 ```sh
 curl --fail --show-error --silent --location --proto '=https' --proto-redir '=https' --tlsv1.2 \
-  https://raw.githubusercontent.com/vivolution/vivolution-install/v0.3.0-rc3/install.sh \
+  https://raw.githubusercontent.com/vivolution/vivolution-install/v0.3.0-rc4/install.sh \
   | sudo sh -s -- --verify-only
 
 curl --fail --show-error --silent --location --proto '=https' --proto-redir '=https' --tlsv1.2 \
-  https://raw.githubusercontent.com/vivolution/vivolution-install/v0.3.0-rc3/install-edge.sh \
+  https://raw.githubusercontent.com/vivolution/vivolution-install/v0.3.0-rc4/install-edge.sh \
   | sudo sh -s -- --verify-only
 ```
 
@@ -156,14 +167,27 @@ Both interactive bootstraps explicitly reopen `/dev/tty`; they fail clearly
 without a controlling terminal instead of reading prompts from the exhausted
 curl pipe.
 
+On Ubuntu 24.04, these commands additionally exercise the packaged OS-metadata
+compatibility check without creating installer state or installing packages:
+
+```sh
+curl --fail --show-error --silent --location --proto '=https' --proto-redir '=https' --tlsv1.2 \
+  https://raw.githubusercontent.com/vivolution/vivolution-install/v0.3.0-rc4/install.sh \
+  | sudo sh -s -- check-host-os
+
+curl --fail --show-error --silent --location --proto '=https' --proto-redir '=https' --tlsv1.2 \
+  https://raw.githubusercontent.com/vivolution/vivolution-install/v0.3.0-rc4/install-edge.sh \
+  | sudo sh -s -- --check-host-os
+```
+
 ## Immutable release record
 
-- Public release: `v0.3.0-rc3`
-- Approved private source commit: `9c82b0a9086ec519c4f55ab1be7da4ec23d75e7c`
-- Controller asset: `vivolution-controller-0.3.0-rc3.tar.gz`
-- Controller asset SHA-256: `702f98e3fda2a51fd238418281675d670095d9e7758086aaa27c9d6a4cc9f4cf`
-- Edge asset: `vivolution-edge-enrollment-0.3.0-rc3.tar.gz`
-- Edge asset SHA-256: `eae85dbe1cb8c6569e4827a45fec542df5e95eb4a0778ced091750f25d327e99`
+- Public release: `v0.3.0-rc4`
+- Approved private source commit: `337f8717c72d4734e78195ac83a02828ab424738`
+- Controller asset: `vivolution-controller-0.3.0-rc4.tar.gz`
+- Controller asset SHA-256: `5e2d24d490defbac3da3f6792a6cfdee5c0bfbe39635a497f693b3b4bb80a5db`
+- Edge asset: `vivolution-edge-enrollment-0.3.0-rc4.tar.gz`
+- Edge asset SHA-256: `888f9cec11162930e99fd224345ca122d35476e7b803357b9155f7df2371ed9b`
 
 Both assets are built from the same immutable private source commit but have
 separate explicit reviewed allowlists. The release test proves that the Controller's

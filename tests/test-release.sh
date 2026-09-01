@@ -86,6 +86,12 @@ grep -F "ARCHIVE_SHA256='${CONTROLLER_ARCHIVE_SHA256}'" \
 grep -F "ARCHIVE_SHA256='${EDGE_ENROLLMENT_ARCHIVE_SHA256}'" \
     "${PUBLIC_ROOT}/install-edge.sh" >/dev/null ||
     fail 'Edge enrollment bootstrap checksum does not match release.conf'
+grep -F "BOOTSTRAP_MODE='check-host-os'" \
+    "${PUBLIC_ROOT}/install-edge.sh" >/dev/null ||
+    fail 'public Edge bootstrap does not expose the packaged host OS check'
+grep -F "\"\$installer_path\" --check-host-os" \
+    "${PUBLIC_ROOT}/install-edge.sh" >/dev/null ||
+    fail 'public Edge bootstrap does not invoke the packaged host OS check'
 
 if grep -F 'PENDING' \
     "${PUBLIC_ROOT}/release.conf" \
@@ -125,6 +131,9 @@ edge_raw_url="https://raw.githubusercontent.com/vivolution/vivolution-install/v$
 controller_latest_url="https://raw.githubusercontent.com/vivolution/vivolution-install/main/install.sh"
 grep -F "$controller_latest_url" "${PUBLIC_ROOT}/README.md" >/dev/null ||
     fail 'README is missing the permanent latest-recommended Controller command'
+grep -F "$controller_latest_url | sudo sh -s -- resume" \
+    "${PUBLIC_ROOT}/README.md" >/dev/null ||
+    fail 'README is missing the failed-preflight resume command'
 grep -F "$controller_raw_url" "${PUBLIC_ROOT}/README.md" >/dev/null ||
     fail 'README Controller command does not use the release tag'
 grep -F "$edge_raw_url" "${PUBLIC_ROOT}/README.md" >/dev/null ||
@@ -162,6 +171,7 @@ edge_release_root="${edge_extract}/${EDGE_ARCHIVE_ROOT}"
 
 controller_caddyfile="${controller_release_root}/installer/ansible/roles/ubuntu_ingress/templates/Caddyfile.j2"
 controller_installer="${controller_release_root}/installer/vivo_cp_installer.py"
+edge_installer="${edge_release_root}/installer/install-edge.sh"
 issuer_count=$(awk 'index($0, "cert_issuer acme") { count++ } END { print count + 0 }' \
     "$controller_caddyfile")
 [ "$issuer_count" -eq 1 ] ||
@@ -178,6 +188,15 @@ grep -F 'LEDGER_SCHEMA_VERSION = 4' "$controller_installer" >/dev/null ||
     fail 'packaged Controller does not refuse the rc2 installer ledger schema'
 grep -F "Let's Encrypt ACME contact email" "$controller_installer" >/dev/null ||
     fail 'packaged Controller does not ask for the ACME contact email'
+grep -F 'link_target == "../usr/lib/os-release"' "$controller_installer" >/dev/null ||
+    fail 'packaged Controller does not accept the canonical Ubuntu OS metadata link'
+for host_check_installer in "$controller_installer" "$edge_installer"; do
+    grep -F 'os.O_CLOEXEC | os.O_NOFOLLOW | os.O_NONBLOCK' \
+        "$host_check_installer" >/dev/null ||
+        fail 'a packaged installer does not enforce no-follow OS metadata reads'
+    grep -F 'check-host-os' "$host_check_installer" >/dev/null ||
+        fail 'a packaged installer is missing the non-installing host OS check'
+done
 
 compare_allowlist() {
     release_root=$1

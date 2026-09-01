@@ -1,9 +1,9 @@
 #!/bin/sh
 set -eu
 
-CONTROLLER_BOOTSTRAP_URL='https://raw.githubusercontent.com/vivolution/vivolution-install/v0.3.0-rc3/install.sh'
+CONTROLLER_BOOTSTRAP_URL='https://raw.githubusercontent.com/vivolution/vivolution-install/v0.3.0-rc4/install.sh'
 CONTROLLER_LATEST_URL='https://raw.githubusercontent.com/vivolution/vivolution-install/main/install.sh'
-EDGE_BOOTSTRAP_URL='https://raw.githubusercontent.com/vivolution/vivolution-install/v0.3.0-rc3/install-edge.sh'
+EDGE_BOOTSTRAP_URL='https://raw.githubusercontent.com/vivolution/vivolution-install/v0.3.0-rc4/install-edge.sh'
 TEMP_ROOT=''
 
 fail() {
@@ -53,4 +53,17 @@ cmp "${TEMP_ROOT}/controller-tagged.sh" "${TEMP_ROOT}/controller-latest.sh" ||
     fail 'latest-recommended Controller bootstrap differs from the approved tagged bootstrap'
 verify_bootstrap edge-enrollment "$EDGE_BOOTSTRAP_URL"
 
-printf 'Published Ubuntu 24.04 tagged/latest Controller and Edge-enrollment bootstrap verification passed.\n'
+curl --fail --show-error --silent --location \
+    --proto '=https' --tlsv1.2 \
+    "$CONTROLLER_BOOTSTRAP_URL" \
+    | sudo sh -s -- check-host-os
+curl --fail --show-error --silent --location \
+    --proto '=https' --tlsv1.2 \
+    "$CONTROLLER_LATEST_URL" \
+    | sudo sh -s -- check-host-os
+curl --fail --show-error --silent --location \
+    --proto '=https' --tlsv1.2 \
+    "$EDGE_BOOTSTRAP_URL" \
+    | sudo sh -s -- --check-host-os
+
+printf 'Published Ubuntu 24.04 integrity and packaged host-OS verification passed.\n'

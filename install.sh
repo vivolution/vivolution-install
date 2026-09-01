@@ -3,9 +3,9 @@ set -eu
 
 # These values are immutable for this tagged bootstrap. The source archive is
 # accepted only when its complete SHA-256 digest matches this release record.
-RELEASE_VERSION='0.3.0-rc3'
-SOURCE_COMMIT='9c82b0a9086ec519c4f55ab1be7da4ec23d75e7c'
-ARCHIVE_SHA256='702f98e3fda2a51fd238418281675d670095d9e7758086aaa27c9d6a4cc9f4cf'
+RELEASE_VERSION='0.3.0-rc4'
+SOURCE_COMMIT='337f8717c72d4734e78195ac83a02828ab424738'
+ARCHIVE_SHA256='5e2d24d490defbac3da3f6792a6cfdee5c0bfbe39635a497f693b3b4bb80a5db'
 ARCHIVE_NAME="vivolution-controller-${RELEASE_VERSION}.tar.gz"
 ARCHIVE_ROOT="vivolution-controller-${RELEASE_VERSION}"
 ARCHIVE_URL="https://github.com/vivolution/vivolution-install/releases/download/v${RELEASE_VERSION}/${ARCHIVE_NAME}"

@@ -3,9 +3,9 @@ set -eu
 
 # These values are immutable for this tagged bootstrap. The source archive is
 # accepted only when its complete SHA-256 digest matches this release record.
-RELEASE_VERSION='0.3.0-rc3'
-SOURCE_COMMIT='9c82b0a9086ec519c4f55ab1be7da4ec23d75e7c'
-ARCHIVE_SHA256='eae85dbe1cb8c6569e4827a45fec542df5e95eb4a0778ced091750f25d327e99'
+RELEASE_VERSION='0.3.0-rc4'
+SOURCE_COMMIT='337f8717c72d4734e78195ac83a02828ab424738'
+ARCHIVE_SHA256='888f9cec11162930e99fd224345ca122d35476e7b803357b9155f7df2371ed9b'
 ARCHIVE_NAME="vivolution-edge-enrollment-${RELEASE_VERSION}.tar.gz"
 ARCHIVE_ROOT="vivolution-edge-enrollment-${RELEASE_VERSION}"
 ARCHIVE_URL="https://github.com/vivolution/vivolution-install/releases/download/v${RELEASE_VERSION}/${ARCHIVE_NAME}"
@@ -33,9 +33,12 @@ require_command() {
 if [ "${1:-}" = '--verify-only' ]; then
     BOOTSTRAP_MODE='verify-only'
     shift
+elif [ "${1:-}" = '--check-host-os' ]; then
+    BOOTSTRAP_MODE='check-host-os'
+    shift
 fi
 if [ "$#" -ne 0 ]; then
-    fail 'the public bootstrap accepts only --verify-only'
+    fail 'the public bootstrap accepts only --verify-only or --check-host-os'
 fi
 
 if [ "$(id -u)" -ne 0 ]; then
@@ -157,6 +160,10 @@ done
 if [ "$BOOTSTRAP_MODE" = 'verify-only' ]; then
     printf 'Vivolution Edge enrollment %s BETA archive verification passed; nothing was installed.\n' \
         "$RELEASE_VERSION"
+    exit 0
+fi
+if [ "$BOOTSTRAP_MODE" = 'check-host-os' ]; then
+    "$installer_path" --check-host-os
     exit 0
 fi
 
