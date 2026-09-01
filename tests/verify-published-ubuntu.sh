@@ -1,8 +1,8 @@
 #!/bin/sh
 set -eu
 
-CONTROLLER_BOOTSTRAP_URL='https://raw.githubusercontent.com/vivolution/vivolution-install/v0.3.0-rc2/install.sh'
-EDGE_BOOTSTRAP_URL='https://raw.githubusercontent.com/vivolution/vivolution-install/v0.3.0-rc2/install-edge.sh'
+CONTROLLER_BOOTSTRAP_URL='https://raw.githubusercontent.com/vivolution/vivolution-install/v0.3.0-rc3/install.sh'
+EDGE_BOOTSTRAP_URL='https://raw.githubusercontent.com/vivolution/vivolution-install/v0.3.0-rc3/install-edge.sh'
 TEMP_ROOT=''
 
 fail() {

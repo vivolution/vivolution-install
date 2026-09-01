@@ -21,7 +21,7 @@ Run this from a normal sudo-enabled account on a fresh Ubuntu Server 24.04 LTS
 machine:
 
 ```sh
-curl --fail --show-error --silent --location --proto '=https' --tlsv1.2 https://raw.githubusercontent.com/vivolution/vivolution-install/v0.3.0-rc2/install.sh | sudo sh
+curl --fail --show-error --silent --location --proto '=https' --tlsv1.2 https://raw.githubusercontent.com/vivolution/vivolution-install/v0.3.0-rc3/install.sh | sudo sh
 ```
 
 This command installs **standalone CP1 only**. CP2, CP3, automatic controller
@@ -41,9 +41,31 @@ two distinct DNS hostnames; enter hostnames only, without `https://` or a path:
   `probe.cloudpremises.com`, or `cp.cloudved.com`.
 
 For standalone CP1, both public DNS A records must resolve only to this Ubuntu
-machine's declared public IPv4 address. Allow inbound TCP 22, 80, and 443. In a
-future qualified multi-controller deployment, each Controller keeps its unique
-VM FQDN while the shared FQDN remains stable in front of the Controller service.
+machine's declared public IPv4 address and neither name may publish an AAAA
+record. Allow inbound TCP 22, 80, and 443. In a future qualified
+multi-controller deployment, each Controller keeps its unique VM FQDN while
+the shared FQDN remains stable in front of the Controller service.
+
+### Let's Encrypt certificates
+
+The wizard asks for a **Let's Encrypt ACME contact email**, defaulting to the
+validated Controller administrator email. Caddy is configured with exactly one
+certificate issuer: the Let's Encrypt production ACME directory. It requests
+public certificates for both the unique Controller VM FQDN and stable shared
+FQDN, stores the managed keys under Caddy's protected service data directory,
+redirects HTTP to HTTPS, and renews the certificates automatically.
+
+There is no ZeroSSL or local/self-signed fallback in this Controller profile.
+If public issuance is unavailable, the trusted HTTPS readiness checks fail the
+installation instead of accepting an untrusted certificate. Before installing,
+ensure both A records are fully propagated, remove stale/incorrect AAAA records,
+make public TCP 80/443 reach this VM, and permit `letsencrypt.org` in any CAA
+policy. This rc3 candidate requires a fresh host; it does not claim to convert
+certificates cached by an rc2 installation.
+
+This automation covers the Controller web/API certificate only. Future SBC
+certificates for Microsoft Teams Direct Routing and SIP trunks use a separate
+certificate workflow and are not installed by this enrollment-only release.
 
 ## 2. Enrollment-only Edge client (not an SBC installer)
 
@@ -51,7 +73,7 @@ This command installs only the outbound Edge enrollment client/placeholder on
 a separate fresh Ubuntu Server 24.04 LTS machine:
 
 ```sh
-curl --fail --show-error --silent --location --proto '=https' --tlsv1.2 https://raw.githubusercontent.com/vivolution/vivolution-install/v0.3.0-rc2/install-edge.sh | sudo sh
+curl --fail --show-error --silent --location --proto '=https' --tlsv1.2 https://raw.githubusercontent.com/vivolution/vivolution-install/v0.3.0-rc3/install-edge.sh | sudo sh
 ```
 
 It does **not** install or configure an SBC, SIP services, RTP/media, Microsoft
@@ -89,11 +111,11 @@ checks without installing anything:
 
 ```sh
 curl --fail --show-error --silent --location --proto '=https' --tlsv1.2 \
-  https://raw.githubusercontent.com/vivolution/vivolution-install/v0.3.0-rc2/install.sh \
+  https://raw.githubusercontent.com/vivolution/vivolution-install/v0.3.0-rc3/install.sh \
   | sudo sh -s -- --verify-only
 
 curl --fail --show-error --silent --location --proto '=https' --tlsv1.2 \
-  https://raw.githubusercontent.com/vivolution/vivolution-install/v0.3.0-rc2/install-edge.sh \
+  https://raw.githubusercontent.com/vivolution/vivolution-install/v0.3.0-rc3/install-edge.sh \
   | sudo sh -s -- --verify-only
 ```
 
@@ -103,12 +125,12 @@ curl pipe.
 
 ## Immutable release record
 
-- Public release: `v0.3.0-rc2`
-- Approved private source commit: `d0dd678c75cf8fc5f61f03614e092d70c15e2494`
-- Controller asset: `vivolution-controller-0.3.0-rc2.tar.gz`
-- Controller asset SHA-256: `3896506c93f5241be39d137705118bbed5738ca9ff1c432c8fef21376687d01a`
-- Edge asset: `vivolution-edge-enrollment-0.3.0-rc2.tar.gz`
-- Edge asset SHA-256: `75bf36f88e85106bf51f8122a68b0626f829f834b7c438c86a30218c059f6700`
+- Public release: `v0.3.0-rc3`
+- Approved private source commit: `9c82b0a9086ec519c4f55ab1be7da4ec23d75e7c`
+- Controller asset: `vivolution-controller-0.3.0-rc3.tar.gz`
+- Controller asset SHA-256: `702f98e3fda2a51fd238418281675d670095d9e7758086aaa27c9d6a4cc9f4cf`
+- Edge asset: `vivolution-edge-enrollment-0.3.0-rc3.tar.gz`
+- Edge asset SHA-256: `eae85dbe1cb8c6569e4827a45fec542df5e95eb4a0778ced091750f25d327e99`
 
 Both assets are built from the same immutable private source commit but have
 separate explicit reviewed allowlists. The release test proves that the Controller's

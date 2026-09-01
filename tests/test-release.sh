@@ -104,6 +104,28 @@ grep -F -- "- Controller asset SHA-256: \`${CONTROLLER_ARCHIVE_SHA256}\`" \
 grep -F -- "- Edge asset SHA-256: \`${EDGE_ENROLLMENT_ARCHIVE_SHA256}\`" \
     "${PUBLIC_ROOT}/README.md" >/dev/null ||
     fail 'README Edge checksum does not match release.conf'
+grep -F -- "- Public release: \`v${RELEASE_VERSION}\`" \
+    "${PUBLIC_ROOT}/README.md" >/dev/null ||
+    fail 'README public release version does not match release.conf'
+grep -F -- "- Controller asset: \`${CONTROLLER_ARCHIVE_NAME}\`" \
+    "${PUBLIC_ROOT}/README.md" >/dev/null ||
+    fail 'README Controller asset name does not match release.conf'
+grep -F -- "- Edge asset: \`${EDGE_ARCHIVE_NAME}\`" \
+    "${PUBLIC_ROOT}/README.md" >/dev/null ||
+    fail 'README Edge asset name does not match release.conf'
+
+controller_raw_url="https://raw.githubusercontent.com/vivolution/vivolution-install/v${RELEASE_VERSION}/install.sh"
+edge_raw_url="https://raw.githubusercontent.com/vivolution/vivolution-install/v${RELEASE_VERSION}/install-edge.sh"
+grep -F "$controller_raw_url" "${PUBLIC_ROOT}/README.md" >/dev/null ||
+    fail 'README Controller command does not use the release tag'
+grep -F "$edge_raw_url" "${PUBLIC_ROOT}/README.md" >/dev/null ||
+    fail 'README Edge command does not use the release tag'
+grep -F "CONTROLLER_BOOTSTRAP_URL='${controller_raw_url}'" \
+    "${PUBLIC_ROOT}/tests/verify-published-ubuntu.sh" >/dev/null ||
+    fail 'published Ubuntu verifier has a stale Controller URL'
+grep -F "EDGE_BOOTSTRAP_URL='${edge_raw_url}'" \
+    "${PUBLIC_ROOT}/tests/verify-published-ubuntu.sh" >/dev/null ||
+    fail 'published Ubuntu verifier has a stale Edge URL'
 
 controller_extract="${TEMP_ROOT}/controller-extract"
 edge_extract="${TEMP_ROOT}/edge-extract"
@@ -125,6 +147,25 @@ edge_release_root="${edge_extract}/${EDGE_ARCHIVE_ROOT}"
     fail 'packaged Controller source contains a link'
 [ -z "$(find "$edge_release_root" -type l -print -quit)" ] ||
     fail 'packaged Edge enrollment source contains a link'
+
+controller_caddyfile="${controller_release_root}/installer/ansible/roles/ubuntu_ingress/templates/Caddyfile.j2"
+controller_installer="${controller_release_root}/installer/vivo_cp_installer.py"
+issuer_count=$(awk 'index($0, "cert_issuer acme") { count++ } END { print count + 0 }' \
+    "$controller_caddyfile")
+[ "$issuer_count" -eq 1 ] ||
+    fail 'packaged Controller must configure exactly one ACME certificate issuer'
+grep -F 'dir https://acme-v02.api.letsencrypt.org/directory' \
+    "$controller_caddyfile" >/dev/null ||
+    fail "packaged Controller is not pinned to Let's Encrypt production"
+grep -F 'email {{ cp_acme_email | to_json }}' "$controller_caddyfile" >/dev/null ||
+    fail 'packaged Controller does not safely render the ACME contact email'
+if grep -i -E 'zerossl|tls[[:space:]]+internal' "$controller_caddyfile" >/dev/null; then
+    fail 'packaged Controller contains an alternate or local certificate issuer'
+fi
+grep -F 'LEDGER_SCHEMA_VERSION = 4' "$controller_installer" >/dev/null ||
+    fail 'packaged Controller does not refuse the rc2 installer ledger schema'
+grep -F "Let's Encrypt ACME contact email" "$controller_installer" >/dev/null ||
+    fail 'packaged Controller does not ask for the ACME contact email'
 
 compare_allowlist() {
     release_root=$1
