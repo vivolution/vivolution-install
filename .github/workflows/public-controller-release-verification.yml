@@ -1,0 +1,65 @@
+name: Public Controller release verification
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - install.sh
+      - install-edge.sh
+      - release.conf
+      - README.md
+      - scripts/**
+      - tests/**
+      - .github/workflows/public-controller-release-verification.yml
+  pull_request:
+    paths:
+      - install.sh
+      - install-edge.sh
+      - release.conf
+      - README.md
+      - scripts/**
+      - tests/**
+      - .github/workflows/public-controller-release-verification.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: public-controller-release-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify-published-controller:
+    name: Ubuntu 24.04 published Controller contract
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - name: Check out the audited public repository
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+
+      - name: Parse every public shell entry point with dash
+        shell: bash
+        run: |
+          set -euo pipefail
+          while IFS= read -r script; do
+            dash -n "$script"
+          done < <(find . -type f -name '*.sh' -not -path './.git/*' -print | LC_ALL=C sort)
+
+      - name: Verify the published asset, pinned checksum, archive boundary, and Ubuntu preflight
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo env BOOTSTRAP_PATH="$GITHUB_WORKSPACE/install.sh" \
+            sh "$GITHUB_WORKSPACE/tests/verify-published-ubuntu.sh" 2>&1 \
+            | tee "$RUNNER_TEMP/public-controller-release-verification.log"
+
+      - name: Retain the non-secret verification transcript
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: public-controller-release-verification-${{ github.sha }}
+          path: ${{ runner.temp }}/public-controller-release-verification.log
+          if-no-files-found: ignore
+          retention-days: 14
